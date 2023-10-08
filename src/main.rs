@@ -1,16 +1,26 @@
 #![no_std]
 #![no_main]
 
+mod comms;
+
+use comms::Communicator;
 use esp_backtrace as _;
-use esp_println::println;
-use hal::{peripherals::Peripherals, prelude::*};
+use esp_wifi::current_millis;
 
-#[entry]
+#[hal::entry]
 fn main() -> ! {
-    let peripherals = Peripherals::take();
-    let _system = peripherals.SYSTEM.split();
+	#[cfg(feature = "log")]
+	esp_println::logger::init_logger(log::LevelFilter::Info);
 
-    println!("Hello world!");
+	let mut communicator = Communicator::new();
 
-    loop {}
+	let mut next_send_time = current_millis() + 5 * 1000;
+	loop {
+		communicator.receive_broadcast();
+
+		if current_millis() >= next_send_time {
+			next_send_time = current_millis() + 5 * 1000;
+			communicator.broadcast(b"0123456789");
+		}
+	}
 }
